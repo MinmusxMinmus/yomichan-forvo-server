@@ -6,6 +6,10 @@ Cloudflare scraping protections.  However, since this dependency can't easily be
 vendored in, I'm choosing to keep it as a standalone server and *not as an Anki
 plugin*.
 
+
+Here is an example query:
+
+#+NAME: example-query
 #+begin_src verb :wrap src ob-verb-response
   GET http://localhost:8770/?term=蒙在鼓里
 #+end_src
