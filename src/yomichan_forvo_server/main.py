@@ -158,7 +158,7 @@ class Forvo():
                 "Male": '♂',
                 "Female": '♀',
             }.get(pronunciation.get("gender"), "")
-            
+
             name = f"Forvo ({genderSymbol}{pronunciation['username']})"
             if(country := pronunciation.get("country")):
                 name = re.sub(r"\)$", f", {country})", name)
@@ -241,7 +241,7 @@ class ForvoHandler(http.server.SimpleHTTPRequestHandler):
 
         # Allow overriding the language
         self.forvo.config.language = query_components.get("language", [self.forvo.config.language])[0]
-           
+
         if debug:
             debug_resp = {
                 "debug":True
