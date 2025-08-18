@@ -174,7 +174,7 @@ class Forvo():
         # <ul class="word-play-list-icon-size-l">
         #   <li><span class="play" onclick"(some javascript to play the word audio)"></li>
         # </ul>
-        results = html_fromstring(html).xpath(f'//ul[@class="word-play-list-icon-size-l"]/li/div[@class="play"]')
+        results = html_fromstring(html).xpath(f'//ul[@class="word-play-list-icon-size-l"]/li/div[contains(@class, "play")]/@onclick')
         audio_sources = []
         for i in results:
             url = self._extract_url(i)
