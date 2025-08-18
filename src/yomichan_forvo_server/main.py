@@ -35,6 +35,9 @@ class ForvoConfig():
 
 _forvo_config = ForvoConfig()
 
+class ReusableTCPServer(socketserver.TCPServer):
+    allow_reuse_address = True
+
 class Forvo():
     """
     Forvo web-scraper utility class that matches YomiChan's expected output for a custom audio source
@@ -294,7 +297,7 @@ class ForvoHandler(http.server.SimpleHTTPRequestHandler):
 if __name__ == "__main__":
     # If we're not in Anki, run the server directly and blocking for easier debugging
     print("Running in debug mode...")
-    httpd = socketserver.TCPServer(('localhost', 8770), ForvoHandler)
+    httpd = ReusableTCPServer(('localhost', 8770), ForvoHandler, )
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
