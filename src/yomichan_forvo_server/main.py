@@ -1,21 +1,18 @@
 import http.server
 import socketserver
-import requests
 import re
 import json
 import base64
-import threading
 
 from http import HTTPStatus
-from bs4 import BeautifulSoup
 from urllib.parse import urlparse
 from urllib.parse import parse_qs
 from dataclasses import dataclass, field
 from typing import List
 
-from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.util.retry import Retry
-
+import curl_cffi
+from lxml.html import fromstring as html_fromstring
+from lxml import etree
 
 # Config default values
 @dataclass
@@ -46,42 +43,14 @@ class Forvo():
     _AUDIO_HTTP_HOST = "https://audio12.forvo.com"
     def __init__(self, config=_forvo_config):
         self.config = config
-        self._set_session()
-
-    def _set_session(self):
-        """
-        Sets the session with basic backoff retries.
-        Put in a separate function so we can try resetting the session if something goes wrong
-        """
-        retry_strategy = Retry(
-            total=3,
-            backoff_factor=1,
-            status_forcelist=[429, 500, 502, 503, 504],
-            allowed_methods=["HEAD", "GET", "OPTIONS"]
-        )
-        adapter = HTTPAdapter(max_retries=retry_strategy)
-        self.session = requests.Session()
-        self.session.mount("https://", adapter)
-        self.session.mount("http://", adapter)
-        # Use my personal user agent to try to avoid scraping detection
-        self.session.headers.update(
-            {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36 Edg/105.0.1343.27",
-                "Accept-Language": "en-US,en;q=0.5",
-            }
-        )
 
     def _get(self, path):
         """
-        Makes a GET request assuming base url. Creates a new session if something goes wrong
+        Makes a GET request assuming base url.
         """
         url = self._SERVER_HOST + path
-        try:
-            return self.session.get(url, timeout=10).text
-
-        except Exception:
-            self._set_session()
-            return self.session.get(url, timeout=10).text
+        ret = curl_cffi.get(url, timeout=10, impersonate="chrome").text
+        return ret.removeprefix('<!doctype html>\n')
 
     def word(self, w):
         """
@@ -92,7 +61,6 @@ class Forvo():
             return []
         path = f"/word/{w}/"
         html = self._get(path)
-        soup = BeautifulSoup(html, features="html.parser")
 
         # Forvo's word page returns multiple result sets grouped by langauge like:
         # <div id="language-container-ja">
@@ -109,26 +77,26 @@ class Forvo():
         #   <article id="extra-word-info-76">...</article>
         # </ul>
         # We also filter out ads
-        results = soup.select(f"#language-container-{self.config.language}>article>ul.pronunciations-list>li:not(.li-ad)")
+        results = html_fromstring(html).xpath(f'.//div[@id="language-container-{self.config.language}"]/article/ul[@id="pronunciations-list-zh"]/li')
         pronunciations = []
         for i in results:
-            url = self._extract_url(i.div)
+            url = self._extract_url(i.xpath("./div[contains(@class,'play')]/@onclick")[0])
 
             # Capture the username of the user
             # Some users have deleted accounts which is why can't just parse it from the <a> tag
-            username_match = re.search(r"Pronunciation by([^(]+)\(", i.get_text(strip=True))
-            username = username_match.group(1).strip() if username_match else 'Unknown'
+            username = i.xpath("./span/span/@data-p2")[0]
 
             pronunciation = {
                 'username': username,
                 'url': url
             }
+            res_str = etree.tostring(i, encoding="unicode")
             if self.config.show_gender:
-                m = re.search(r"\((Male|Female)", i.get_text(strip=True))
+                m = re.search(r"\((Male|Female)", res_str)
                 if m:
                     pronunciation['gender'] = m.group(1).strip()
             if self.config.show_country or self.config.preferred_countries:
-                countryMatch = re.search(r"\((?:Male|Female) from ([^)]+)\)", i.get_text(strip=True))
+                countryMatch = re.search(r"\((?:Male|Female) from ([^)]+)\)", res_str)
                 if countryMatch:
                     pronunciation['country'] = countryMatch.group(1).strip()
 
@@ -173,13 +141,12 @@ class Forvo():
         return audio_sources
 
     @classmethod
-    def _extract_url(cls, element):
-        play = element['onclick']
+    def _extract_url(cls, onclick):
         # We are interested in Forvo's javascript Play function which takes in some parameters to play the audio
         # Example: Play(3060224,'OTQyN...','OTQyN..',false,'Yy9wL2NwXzk0MjYzOTZfNzZfMzM1NDkxNS5tcDM=','Yy9wL...','h')
         # Match anything that isn't commas, parentheses or quotes to capture the function arguments
         # Regex will match something like ["Play", "3060224", ...]
-        play_args = re.findall(r"([^',\(\)]+)", play)
+        play_args = re.findall(r"([^',\(\)]+)", onclick)
 
         # Forvo has two locations for mp3, /audios/mp3 and just /mp3
         # /audios/mp3 is normalized and has the filename in the 5th argument of Play base64 encoded
@@ -202,13 +169,12 @@ class Forvo():
             return []
         path = f"/search/{s}/{self.config.language}/"
         html = self._get(path)
-        soup = BeautifulSoup(html, features="html.parser")
 
         # Forvo's search page returns two result sets like:
         # <ul class="word-play-list-icon-size-l">
         #   <li><span class="play" onclick"(some javascript to play the word audio)"></li>
         # </ul>
-        results = soup.select('ul.word-play-list-icon-size-l>li>div.play')
+        results = html_fromstring(html).xpath(f'//ul[@class="word-play-list-icon-size-l"]/li/div[@class="play"]')
         audio_sources = []
         for i in results:
             url = self._extract_url(i)
@@ -218,16 +184,6 @@ class Forvo():
 
 class ForvoHandler(http.server.SimpleHTTPRequestHandler):
     forvo = Forvo(config=_forvo_config)
-
-    # By default, SimpleHTTPRequestHandler logs to stderr
-    # This would cause Anki to show an error, even on successful requests
-    # log_error is still a useful function though, so replace it with the inherited log_message
-    # Make log_message do nothing
-    def log_error(self, *args, **kwargs):
-        super().log_message(*args, **kwargs)
-
-    def log_message(self, *args):
-        pass
 
     def do_GET(self):
         # Extract 'term' and 'reading' query parameters
@@ -294,20 +250,12 @@ class ForvoHandler(http.server.SimpleHTTPRequestHandler):
 
         return
 
-if __name__ == "__main__":
-    # If we're not in Anki, run the server directly and blocking for easier debugging
-    print("Running in debug mode...")
+def run():
     httpd = ReusableTCPServer(('localhost', 8770), ForvoHandler, )
     try:
+        print("Running in debug mode...")
         httpd.serve_forever()
     except KeyboardInterrupt:
+        print("Shutting down...")
+        httpd.shutdown()
         httpd.server_close()
-else:
-    # Else, run it in a separate thread so it doesn't block
-    # Also import Anki-specific packages here
-    from aqt import mw
-    _forvo_config.set(mw.addonManager.getConfig(__name__))
-    httpd = http.server.ThreadingHTTPServer(('localhost', _forvo_config.port), ForvoHandler)
-    server_thread = threading.Thread(target=httpd.serve_forever)
-    server_thread.daemon = True
-    server_thread.start()
