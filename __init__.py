@@ -295,7 +295,10 @@ if __name__ == "__main__":
     # If we're not in Anki, run the server directly and blocking for easier debugging
     print("Running in debug mode...")
     httpd = socketserver.TCPServer(('localhost', 8770), ForvoHandler)
-    httpd.serve_forever()
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        httpd.server_close()
 else:
     # Else, run it in a separate thread so it doesn't block
     # Also import Anki-specific packages here
