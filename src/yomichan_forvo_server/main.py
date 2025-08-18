@@ -202,9 +202,8 @@ class ForvoHandler(http.server.SimpleHTTPRequestHandler):
         self.forvo.config.language = query_components.get("language", [self.forvo.config.language])[0]
 
         if debug:
-            debug_resp = {
-                "debug":True
-            }
+            debug_resp = {}
+            debug_resp['debug'] = True
             debug_resp['reading'] = reading
             debug_resp['term'] = term
             debug_resp['word.term'] = self.forvo.word(term)
