@@ -18,7 +18,7 @@ from lxml import etree
 @dataclass
 class ForvoConfig():
     port: int = 8770
-    language: str = 'zh'
+    language: str = 'ja'
     preferred_usernames: List[str] = field(default_factory=list)
     preferred_countries: List[str] = field(default_factory=list)
     show_gender: bool = True
