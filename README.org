@@ -9,9 +9,14 @@ plugin*.
 
 Here is an example query:
 
-#+NAME: example-query
+#+name: example-query-http
 #+begin_src verb :wrap src ob-verb-response
   GET http://localhost:8770/?term=蒙在鼓里
+#+end_src
+
+#+name: example-query-curl
+#+begin_src sh
+curl 'http://localhost:8770/?term=%E8%92%99%E5%9C%A8%E9%BC%93%E9%87%8C'
 #+end_src
 
 The following was the original README when I forked the project:
