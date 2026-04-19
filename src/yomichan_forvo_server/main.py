@@ -91,7 +91,7 @@ class Forvo():
             # it'll just be the last part of the first one.
             if len(username_span) == 0:
                 text = i.xpath("./span")[0].text
-                username = text.strip().split("\t")[-1].strip("")
+                username = text.strip().split("\t")[-1]
             else:
                 username = username_span[0].strip()
 
