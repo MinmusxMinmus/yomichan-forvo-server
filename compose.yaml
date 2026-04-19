@@ -1,0 +1,7 @@
+services:
+  yomichan-forvo-server:
+    build: .
+    ports:
+      - 8770:8770
+    environment:
+      HOST: "0.0.0.0"

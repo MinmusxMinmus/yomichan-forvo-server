@@ -3,6 +3,7 @@ import socketserver
 import re
 import json
 import base64
+from os import environ
 
 from http import HTTPStatus
 from urllib.parse import urlparse
@@ -259,7 +260,8 @@ class ForvoHandler(http.server.SimpleHTTPRequestHandler):
         return
 
 def run():
-    httpd = ReusableTCPServer(('localhost', 8770), ForvoHandler, )
+    host = environ.get("HOST", "localhost")
+    httpd = ReusableTCPServer((host, 8770), ForvoHandler, )
     try:
         print("Running in debug mode...")
         httpd.serve_forever()
