@@ -85,7 +85,15 @@ class Forvo():
 
             # Capture the username of the user
             # Some users have deleted accounts which is why can't just parse it from the <a> tag
-            username = i.xpath("./span/span/@data-p2")[0]
+            username_span = i.xpath("./span/span/@data-p2")
+
+            # Sometimes the username won't be inside a second <span>,
+            # it'll just be the last part of the first one.
+            if len(username_span) == 0:
+                text = i.xpath("./span")[0].text
+                username = text.strip().split("\t")[-1].strip("")
+            else:
+                username = username_span[0].strip()
 
             pronunciation = {
                 'username': username,
