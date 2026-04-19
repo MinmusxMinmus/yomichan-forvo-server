@@ -77,7 +77,8 @@ class Forvo():
         #   <article id="extra-word-info-76">...</article>
         # </ul>
         # We also filter out ads
-        results = html_fromstring(html).xpath(f'.//div[@id="language-container-{self.config.language}"]/article/ul[@id="pronunciations-list-zh"]/li')
+        results = html_fromstring(html).xpath(f'.//div[@id="language-container-{self.config.language}"]/article/ul[@id="pronunciations-list-{self.config.language}"]/li')
+
         pronunciations = []
         for i in results:
             url = self._extract_url(i.xpath("./div[contains(@class,'play')]/@onclick")[0])
