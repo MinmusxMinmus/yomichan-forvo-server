@@ -6,23 +6,22 @@ Cloudflare scraping protections.  However, since this dependency can't easily be
 vendored in, I'm choosing to keep it as a standalone server and *not as an Anki
 plugin*.
 
-Prerequisites:
-- [[https://docs.astral.sh/uv/][uv]]
-- UNIX shell (I don't use Windows, I have no idea what the exact steps to run
-  this would be.  If someone wants to figure that out for me, PRs welcome).
-
-To run the server locally:
-- Navigate to the =yomichan-forvo-server= repository root (where this README is
-  located).
-- Run ~uv sync~ to pull dependencies and prepare the venv.
-- Run ~uv run server~ to run the server.
-
-Alternatively, to run it as a container:
+To run the server as a container:
 - Ensure you have Docker (or equivalent) installed.
 - Ensure you have Docker Compose (or equivalent) installed.
 - Navigate to the =yomichan-forvo-server= repository root (where this README is
   located).
 - Run ~docker compose up -d~ (or equivalent).
+
+Alternatively, to run it locally:
+- Ensure you have [[https://docs.astral.sh/uv/][uv]] installed.
+- Ensure you have a UNIX shell (I don't use Windows, I have no idea what the
+  exact steps to run this would be.  If someone wants to figure that out for me,
+  PRs welcome).
+- Navigate to the =yomichan-forvo-server= repository root (where this README is
+  located).
+- Run ~uv sync~ to pull dependencies and prepare the venv.
+- Run ~uv run server~ to run the server.
 
 Here is an example query:
 
